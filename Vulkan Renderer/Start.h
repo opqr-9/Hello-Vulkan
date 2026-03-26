@@ -28,4 +28,4 @@
 #pragma comment(lib, "vulkan-1.lib") //链接编译所需的静态存根库
 #endif
 #include <vulkan/vulkan.h>
-#include <vulkan/vulkan_raii.hpp>
+//#include <vulkan/vulkan_raii.hpp>

@@ -40,7 +40,7 @@ void InitVulkan()
 	GraphicsBase::base.CreateTextureImageView();
 	GraphicsBase::base.CreateTextureSampler();
 	GraphicsBase::base.LoadModel();
-	//GraphicsBase::base.SetUpGameObjects();
+	GraphicsBase::base.SetUpGameObjects();
 	GraphicsBase::base.CreateVertexBuffer();
 	//GraphicsBase::base.CreateLightBuffer();
 	GraphicsBase::base.CreateIndexBuffer();

@@ -21,12 +21,18 @@ vec3 calcNormal(vec3 n)
 }
 
 
+    if (NdotL < 0)
+    {
+        outColor = baseColor;
+        return;
+    }
+
 */
 
 #define PI radians(180.0)
 
 vec3 lightColor = vec3(1.0, 1.0, 1.0); // °×É«¹â
-float lightIntensity = 10.0;
+float lightIntensity = 20.0;
 
 void main() {
     vec3 baseColor = texture(texSampler, fragTexCoord).rgb;
@@ -34,12 +40,6 @@ void main() {
     vec3 N = normalize(TBN * (2 * textureNormal - 1));
     float NdotL = dot(N, lightDir);
     bool flag = false;
-
-    if (NdotL < 0)
-    {
-        outColor = baseColor;
-        return;
-    }
 
     float roughness = texture(roughnessSampler, fragTexCoord).x;
     float metallic = texture(metallicSampler, fragTexCoord).x;
@@ -49,14 +49,14 @@ void main() {
     float alpha2 = pow(roughness, 4);
     float NdotH = dot(N, H);
     float NdotV = dot(N, cameraDir);
-    //float HdotL = dot(H, lightDir);
+    float HdotV = dot(H, cameraDir);
+
+    vec3 F0 = mix(vec3(0.04), baseColor, metallic);
+    vec3 F = F0 + (1 - F0) * pow((1 - HdotV), 5);
 
     float D_GGX = alpha2 / (PI * pow(NdotH * NdotH * (alpha2 - 1) + 1, 2));
 
     float G = (2 * NdotL * NdotV) / (NdotL * ((1 - roughness) * NdotV + roughness) + NdotV * ((1 - roughness) * NdotL + roughness));
-
-    vec3 F0 = mix(vec3(0.04), baseColor, metallic);
-    vec3 F = F0 + (1 - F0) * pow((1 - NdotL), 5);
 
     float correctionfactor = 4 * NdotL * NdotV;
 

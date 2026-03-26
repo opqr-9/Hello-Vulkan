@@ -40,12 +40,13 @@ void main() {
     //gl_Position = ubo.view * ubo.model * vec4(inPosition, 1.0);
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
     vec3 fragPosition = (ubo.model * vec4(inPosition, 1.0)).rgb;
-    vec3 fragNormal = (ubo.model * vec4(normalize(inNormal), 1.0)).rgb; 
-    vec3 Tangent = (ubo.model * vec4(normalize(inTangent), 1.0)).rgb;
+    vec3 fragNormal = (ubo.model * vec4(normalize(inNormal), 1.0)).rgb - (ubo.model * vec4(0, 0, 0, 1.0)).rgb;
+    vec3 Tangent = (ubo.model * vec4(normalize(inTangent), 1.0)).rgb - (ubo.model * vec4(0, 0, 0, 1.0)).rgb;
 
     outCameraDir = normalize(ubo.cameraPos - fragPosition);
     //outLightDir = normalize(ubo.lightPos - fragPosition);
     //outCameraDir = normalize(ubo.cameraPos);
+    //outLightDir = normalize(ubo.lightPos - fragPosition);
     outLightDir = normalize(ubo.lightPos);
     //outLightDir = ubo.lightPos;
 

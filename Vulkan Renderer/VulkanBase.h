@@ -13,11 +13,11 @@ struct GameObject {
 	glm::vec3 rotation = { 0.0f,0.0f,0.0f };
 	glm::vec3 scale = { 1.0f,1.0f,1.0f };
 
-	std::vector<vk::raii::Buffer> uniformBuffers;
-	std::vector<vk::raii::DeviceMemory> uniformBuffersMemory;
+	std::vector<VkBuffer> uniformBuffers;
+	std::vector<VkDeviceMemory> uniformBuffersMemory;
 	std::vector<void*> uniformBuffersMapped;
 
-	vk::raii::DescriptorSets descriptorSets;
+	std::vector<VkDescriptorSet> descriptorSets;
 
 	glm::mat4 GetModelMartix() const
 	{
@@ -31,12 +31,12 @@ struct GameObject {
 	}
 };
 
-const int MAX_OBJECTS = 10;
+const int MAX_OBJECTS = 3;
 std::vector<GameObject> gameObjects;
 
 //const glm::vec3 cameraPos = glm::vec3(4.0f, 0.0f, 4.0f);
-const glm::vec3 cameraPos = glm::vec3(7.0f, 0.0f, 7.0f);
-const glm::vec3 lightPos = glm::vec3(4.0f, 0.0f, 0.0f);
+const glm::vec3 cameraPos = glm::vec3(4.0f, 0.0f, 4.0f);
+const glm::vec3 lightPos = glm::vec3(4.0f, 0.0f, 4.0f);
 //const glm::vec3 lightPos = glm::vec3(4.0f, 0.0f, 4.0f);
 
 //const std::string objFilePath = "textures/viking_room.obj";
@@ -369,9 +369,28 @@ class GraphicsBase
 		auto currentTime = std::chrono::high_resolution_clock::now();
 		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
+		glm::mat4 view = glm::lookAt(cameraPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		//ubo.proj = glm::ortho<float>(-2, 2, -2, 2, 0.1f, 1000.0f);
+		glm::mat4 proj = glm::perspective(glm::radians(45.0f), swapchainCreateInfo.imageExtent.width / (float)swapchainCreateInfo.imageExtent.height, 0.1f, 1000.0f);
+		proj[1][1] *= -1;
+
+		for (uint32_t i = 0; i < gameObjects.size(); i++)
+		{
+			gameObjects[i].rotation.z += 0.001f;
+
+			glm::mat4 initialRotation = glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+			glm::mat4 model = gameObjects[i].GetModelMartix() * initialRotation;
+			//model = glm::rotate(glm::mat4(1.0f), time * glm::radians(30.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+
+			UniformBufferObject ubo = { lightPos,cameraPos,model,view,proj };
+
+			memcpy(gameObjects[i].uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
+		}
+
+		return;
+
 		UniformBufferObject ubo = {};
-		//ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)); 
-		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(30.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)); 
 		ubo.view = glm::lookAt(cameraPos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		//ubo.proj = glm::ortho<float>(-2, 2, -2, 2, 0.1f, 1000.0f);
 		ubo.proj = glm::perspective(glm::radians(45.0f), swapchainCreateInfo.imageExtent.width / (float)swapchainCreateInfo.imageExtent.height, 0.1f, 1000.0f);
@@ -1060,20 +1079,23 @@ public:
 	void CreateUniformBuffers() 
 	{
 		VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-		/*
+
 		for (uint32_t i = 0; i < gameObjects.size(); i++)
 		{
-			gameObjects[i].uniformBuffers.clear();
-			gameObjects[i].uniformBuffersMemory.clear();
-			gameObjects[i].uniformBufferMapped.clear();
+			gameObjects[i].uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+			gameObjects[i].uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+			gameObjects[i].uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
 			for (size_t j = 0; j < MAX_FRAMES_IN_FLIGHT; j++)
 			{
-				CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+				CreateBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 					gameObjects[i].uniformBuffers[j], gameObjects[i].uniformBuffersMemory[j]);
+
+				vkMapMemory(device, gameObjects[i].uniformBuffersMemory[j], 0, bufferSize, 0, &gameObjects[i].uniformBuffersMapped[j]);
 			}
 		}
-		*/
+
+		return;
 
 		uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 		uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1088,34 +1110,139 @@ public:
 
 	void CreateDescriptorPool()
 	{
-		std::vector<VkDescriptorPoolSize> poolSizes(5);
+		std::vector<VkDescriptorPoolSize> poolSizes(2);
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+		poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_OBJECTS * MAX_FRAMES_IN_FLIGHT);
 		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-		poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[2].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-		poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[3].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-		poolSizes[4].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[4].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+		poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_OBJECTS * MAX_FRAMES_IN_FLIGHT * 4);
 
 		VkDescriptorPoolCreateInfo poolInfo = {};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 		poolInfo.pPoolSizes = poolSizes.data();
-		poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+		poolInfo.maxSets = static_cast<uint32_t>(MAX_OBJECTS * MAX_FRAMES_IN_FLIGHT);
 
 		vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool);
 	}
 
 	void CreateDescriptorSets()
 	{
+		for (uint32_t i = 0; i < gameObjects.size(); i++)
+		{
+			std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
+			VkDescriptorSetAllocateInfo allocInfo{};
+			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			allocInfo.descriptorPool = descriptorPool;
+			allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
+			allocInfo.pSetLayouts = layouts.data();
+
+			gameObjects[i].descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+			vkAllocateDescriptorSets(device, &allocInfo, gameObjects[i].descriptorSets.data());
+			for (size_t j = 0; j < MAX_FRAMES_IN_FLIGHT; j++) {
+				//std::cout << i << j << std::endl;
+				VkDescriptorBufferInfo bufferInfo = {};
+				bufferInfo.buffer = gameObjects[i].uniformBuffers[j];
+				bufferInfo.offset = 0;
+				bufferInfo.range = sizeof(UniformBufferObject);
+				/*
+				std::vector<VkDescriptorImageInfo> imageInfos = {
+					{textureSampler,textureImageView,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+					{metallicSampler,metallicImageView,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+					{normalSampler,normalImageView,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+					{roughnessSampler,roughnessImageView,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
+				};
+
+				std::vector<VkWriteDescriptorSet> descriptorWrites(2);
+
+				descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				descriptorWrites[0].dstSet = descriptorSets[i];
+				descriptorWrites[0].dstBinding = 0;
+				descriptorWrites[0].dstArrayElement = 0;
+				descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				descriptorWrites[0].descriptorCount = 1;
+				descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+				descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				descriptorWrites[1].dstSet = descriptorSets[i];
+				descriptorWrites[1].dstBinding = 1;
+				descriptorWrites[1].dstArrayElement = 0;
+				descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				descriptorWrites[1].descriptorCount = imageInfos.size();
+				descriptorWrites[1].pImageInfo = imageInfos.data();
+				*/
+
+				VkDescriptorImageInfo textureImageInfo = {};
+				textureImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				textureImageInfo.imageView = textureImageView;
+				textureImageInfo.sampler = textureSampler;
+
+				VkDescriptorImageInfo metallicImageInfo = {};
+				metallicImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				metallicImageInfo.imageView = metallicImageView;
+				metallicImageInfo.sampler = metallicSampler;
+
+				VkDescriptorImageInfo normalImageInfo = {};
+				normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				normalImageInfo.imageView = normalImageView;
+				normalImageInfo.sampler = normalSampler;
+
+				VkDescriptorImageInfo roughnessImageInfo = {};
+				roughnessImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				roughnessImageInfo.imageView = roughnessImageView;
+				roughnessImageInfo.sampler = roughnessSampler;
+
+				std::vector<VkWriteDescriptorSet> descriptorWrites(5);
+				descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				descriptorWrites[0].dstSet = gameObjects[i].descriptorSets[j];
+				descriptorWrites[0].dstBinding = 0;
+				descriptorWrites[0].dstArrayElement = 0;
+				descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				descriptorWrites[0].descriptorCount = 1;
+				descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+				descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				descriptorWrites[1].dstSet = gameObjects[i].descriptorSets[j];
+				descriptorWrites[1].dstBinding = 1;
+				descriptorWrites[1].dstArrayElement = 0;
+				descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				descriptorWrites[1].descriptorCount = 1;
+				descriptorWrites[1].pImageInfo = &textureImageInfo;
+
+				descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				descriptorWrites[2].dstSet = gameObjects[i].descriptorSets[j];
+				descriptorWrites[2].dstBinding = 2;
+				descriptorWrites[2].dstArrayElement = 0;
+				descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				descriptorWrites[2].descriptorCount = 1;
+				descriptorWrites[2].pImageInfo = &metallicImageInfo;
+
+				descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				descriptorWrites[3].dstSet = gameObjects[i].descriptorSets[j];
+				descriptorWrites[3].dstBinding = 3;
+				descriptorWrites[3].dstArrayElement = 0;
+				descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				descriptorWrites[3].descriptorCount = 1;
+				descriptorWrites[3].pImageInfo = &normalImageInfo;
+
+				descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				descriptorWrites[4].dstSet = gameObjects[i].descriptorSets[j];
+				descriptorWrites[4].dstBinding = 4;
+				descriptorWrites[4].dstArrayElement = 0;
+				descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				descriptorWrites[4].descriptorCount = 1;
+				descriptorWrites[4].pImageInfo = &roughnessImageInfo;
+
+				vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+			}
+		}
+
+		return;
+
 		std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool = descriptorPool;
-		allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+		allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
 		allocInfo.pSetLayouts = layouts.data();
 
 		descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
@@ -1126,6 +1253,32 @@ public:
 			bufferInfo.buffer = uniformBuffers[i];
 			bufferInfo.offset = 0;
 			bufferInfo.range = sizeof(UniformBufferObject);
+			/*
+			std::vector<VkDescriptorImageInfo> imageInfos = {
+				{textureSampler,textureImageView,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+				{metallicSampler,metallicImageView,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+				{normalSampler,normalImageView,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
+				{roughnessSampler,roughnessImageView,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}
+			};
+
+			std::vector<VkWriteDescriptorSet> descriptorWrites(2);
+
+			descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[0].dstSet = descriptorSets[i];
+			descriptorWrites[0].dstBinding = 0;
+			descriptorWrites[0].dstArrayElement = 0;
+			descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[0].descriptorCount = 1;
+			descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+			descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[1].dstSet = descriptorSets[i];
+			descriptorWrites[1].dstBinding = 1;
+			descriptorWrites[1].dstArrayElement = 0;
+			descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[1].descriptorCount = imageInfos.size();
+			descriptorWrites[1].pImageInfo = imageInfos.data();
+			*/
 
 			VkDescriptorImageInfo textureImageInfo = {};
 			textureImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -1282,22 +1435,22 @@ public:
 			}
 		}
 	}
-	/*
+
 	void SetUpGameObjects()
 	{
+		gameObjects.resize(MAX_OBJECTS);
 		gameObjects[0].position = { 0.0f, 0.0f, 0.0f };
 		gameObjects[0].rotation = { 0.0f, 0.0f, 0.0f };
 		gameObjects[0].scale = { 1.0f, 1.0f, 1.0f };
 
-		gameObjects[1].position = { -2.0f, 0.0f, -1.0f };
-		gameObjects[1].rotation = { 0.0f, glm::radians(45.0f), 0.0f };
-		gameObjects[1].scale = { 0.75f, 0.75f, 0.75f };
+		gameObjects[1].position = { 0.0f, 2.0f, 0.0f };
+		gameObjects[1].rotation = { 0.0f, 0.0f, 0.0f };
+		gameObjects[1].scale = { 1.25f, 1.25f, 1.25f };
 
-		gameObjects[2].position = { 2.0f, 0.0f, -1.0f };
-		gameObjects[2].rotation = { 0.0f, glm::radians(-45.0f), 0.0f };
+		gameObjects[2].position = { 0.0f, -2.0f, 0.0f };
+		gameObjects[2].rotation = { 0.0f, 0.0f, 0.0f };
 		gameObjects[2].scale = { 0.75f, 0.75f, 0.75f };
 	}
-	*/
 
 	void CreateVertexBuffer()
 	{
@@ -1430,8 +1583,15 @@ public:
 		vkCmdBindVertexBuffers(drawCommandBuffers[currentFrame], 0, 1, vertexBuffers, offsets);
 		vkCmdBindIndexBuffer(drawCommandBuffers[currentFrame], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-		vkCmdBindDescriptorSets(drawCommandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
-		vkCmdDrawIndexed(drawCommandBuffers[currentFrame], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+		for (uint32_t i = 0; i < gameObjects.size(); i++)
+		{
+			vkCmdBindDescriptorSets(drawCommandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, 
+				&gameObjects[i].descriptorSets[currentFrame], 0, nullptr);
+			vkCmdDrawIndexed(drawCommandBuffers[currentFrame], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+		}
+
+		//vkCmdBindDescriptorSets(drawCommandBuffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
+		//vkCmdDrawIndexed(drawCommandBuffers[currentFrame], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 		//vkCmdDrawIndexed(drawCommandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
