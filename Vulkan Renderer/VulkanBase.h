@@ -376,7 +376,7 @@ class GraphicsBase
 
 		for (uint32_t i = 0; i < gameObjects.size(); i++)
 		{
-			gameObjects[i].rotation.z += 0.001f;
+			gameObjects[i].rotation.z += 0.003f;
 
 			glm::mat4 initialRotation = glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 			glm::mat4 model = gameObjects[i].GetModelMartix() * initialRotation;

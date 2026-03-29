@@ -1,3 +1,15 @@
-# 本项目为Vulkan练习项目
+# 本项目旨在实现Vulkan渲染器，支持PBR
 
-**参考链接：**[EasyVulkan](https://easyvulkan.github.io/index.html)，[Khronos Vulkan® 教程](https://docs.vulkan.net.cn/tutorial/latest/00_Introduction.html)
+目前PBR功能大致实现，下一步是接入ImGui用以实时调控各种参数
+
+## 渲染效果动图示例
+
+![](/README/渲染效果动图.gif)
+
+## 一些要点
+
+1. 目前无法实时调控物体位置，相机位置，光照方向。
+2. 目前强制需要**basecolor**,**normal**,**metallic**,**roughness**贴图进行渲染，未使用ao贴图
+3. .obj解析器只处理v(位置),vn(法线),vt(纹理位置),f(面)四种数据
+4. 应用程序结束时未销毁各种实例
+
