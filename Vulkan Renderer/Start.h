@@ -14,7 +14,6 @@
 #include <gtc/matrix_transform.hpp>
 #include <gtx/hash.hpp>
 
-
 #include <chrono>
 
 //stb_image.h
@@ -29,3 +28,18 @@
 #endif
 #include <vulkan/vulkan.h>
 //#include <vulkan/vulkan_raii.hpp>
+
+//ImGui
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "imgui-docking/imgui.h"
+
+#define MAX_FRAMES_IN_FLIGHT 2
+
+//VkExtent2D windowSize = { 1000,500 };
+VkExtent2D windowSize = { 800,450 };
+
+glm::vec3 lightPos = glm::vec3(1.0f, 0.0f, 1.0f);
+float lightPosUI[3] = { lightPos.x,lightPos.y,lightPos.z };
+float lightIntensity = 20.0;
+glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f); // °×É«¹â
+float lightColorUI[3] = { lightColor.x,lightColor.y,lightColor.z };

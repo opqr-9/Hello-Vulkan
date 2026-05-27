@@ -1,6 +1,4 @@
-#include "Start.h"
-#include "GlfwGeneral.hpp"
-#include "OBJParser.h"
+#include "VulkanBase.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,24 +38,36 @@ void InitVulkan()
 	GraphicsBase::base.CreateTextureImageView();
 	GraphicsBase::base.CreateTextureSampler();
 	GraphicsBase::base.LoadModel();
-	GraphicsBase::base.SetUpGameObjects();
+	InitGameObjects();
 	GraphicsBase::base.CreateVertexBuffer();
-	//GraphicsBase::base.CreateLightBuffer();
 	GraphicsBase::base.CreateIndexBuffer();
 	GraphicsBase::base.CreateUniformBuffers();
 	GraphicsBase::base.CreateDescriptorPool();
 	GraphicsBase::base.CreateDescriptorSets();
 	GraphicsBase::base.CreateCommandBuffers();
 	GraphicsBase::base.CreateSyncObjects();
+	GraphicsBase::base.initUIResources();
 }
 
 void MainLoop()
 {
+	float deltaTime = 0.02;
 	while (!glfwWindowShouldClose(pWindow))
 	{
 		glfwPollEvents();
 
+		// Update input system
+		InputSystem::Update(deltaTime);
+
+		if (GraphicsBase::base.ImGuiUtil.NewFrame())
+		{
+			//GraphicsBase::base.ImGuiUtil.handleKey();
+			GraphicsBase::base.ImGuiUtil.updateBuffers();
+		}
+
+
 		GraphicsBase::base.DrawFrame();
+
 
 		TitleFPS();
 	}
@@ -68,6 +78,8 @@ int main()
 	InitWindow();
 
 	InitVulkan();
+
+	InputSystem::Initialize();
 
 	MainLoop();
 

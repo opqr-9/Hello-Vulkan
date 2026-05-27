@@ -87,18 +87,34 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="imgui-docking\imgui.cpp" />
+    <ClCompile Include="imgui-docking\imgui_demo.cpp" />
+    <ClCompile Include="imgui-docking\imgui_draw.cpp" />
+    <ClCompile Include="imgui-docking\imgui_tables.cpp" />
+    <ClCompile Include="imgui-docking\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Camera.hpp" />
+    <ClInclude Include="GameObject.h" />
     <ClInclude Include="GLFWGeneral.hpp" />
+    <ClInclude Include="imgui-docking\imgui.h" />
+    <ClInclude Include="InputSystem.h" />
     <ClInclude Include="OBJParser.h" />
+    <ClInclude Include="ShaderModule.h" />
     <ClInclude Include="Start.h" />
     <ClInclude Include="stb_image.h" />
+    <ClInclude Include="UI.h" />
+    <ClInclude Include="Vertex.h" />
     <ClInclude Include="VulkanBase.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shader\FirstTriangle.frag.shader" />
     <None Include="shader\FirstTriangle.vert.shader" />
+    <None Include="shader\PBR.frag.shader" />
+    <None Include="shader\PBR.vert.shader" />
+    <None Include="shader\UI.frag.shader" />
+    <None Include="shader\UI.vert.shader" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

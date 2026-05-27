@@ -41,11 +41,6 @@ private:
 
     void vParser(std::string str, OBJ& obj)
     {
-        static int k = 0;
-        if (k < 1)
-        {
-            std::cout << k++;
-        }
         std::vector<std::string> v = splitStr(str, ' ', 2);
         glm::vec3 tmp = { stod(v[0]), stod(v[1]), stod(v[2]) };
         obj.v.emplace_back(tmp);
@@ -53,11 +48,6 @@ private:
 
     void vnParser(std::string str, OBJ& obj)
     {
-        static int k = 1;
-        if (k < 2)
-        {
-            std::cout << k++;
-        }
         std::vector<std::string> vn = splitStr(str, ' ', 3);
         glm::vec3 tmp = { stod(vn[0]), stod(vn[1]), stod(vn[2]) };
         obj.vn.emplace_back(tmp);
@@ -65,11 +55,6 @@ private:
 
     void vtParser(std::string str, OBJ& obj)
     {
-        static int k = 2;
-        if (k < 3)
-        {
-            std::cout << k++;
-        }
         std::vector<std::string> vt = splitStr(str, ' ', 3);
         glm::vec2 tmp = { stod(vt[0]), stod(vt[1]) };
         obj.vt.emplace_back(tmp);
@@ -77,11 +62,6 @@ private:
 
     void fParser(std::string str, OBJ& obj)
     {
-        static int k = 3;
-        if (k < 4)
-        {
-            std::cout << k++ << std::endl;
-        }
         std::vector<std::string> facePointstr = splitStr(str, ' ', 2),tmp;
         std::vector<std::vector<long long>> facePoint;
         for (int i = 0; i < facePointstr.size(); i++)
